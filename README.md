@@ -16,6 +16,7 @@ The Lambda function is invoked by the SES service and receives an event containi
 ### Input data
 
 The Lambda function is invoked by the AWS SES service.
+
 Event fragment:
 
 ```json
@@ -29,7 +30,6 @@ Event fragment:
       "messageId": "42psa7hk4n6m77qd56tum3dlhtnc3bnc6bhnaio1",
       "destination": ["alias@foo.com"],
       "headersTruncated": false,
-      ...
 ```
 
 From the event, the messageId and destination, which contains the alias address, are extracted. The messageId is also the key name in the S3 bucket containing the email content.
