@@ -20,6 +20,7 @@ def lambda_handler(event, context):
     # Fetch raw email from S3
     raw_email = get_email_body(bucket_name, object_key)
 
+    # Prepare and send email
     maildata = prepare_email_message(raw_email, targets)
     response = send_mail(maildata)
     if response.get('MessageId'):

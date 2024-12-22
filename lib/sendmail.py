@@ -8,6 +8,8 @@ from lib.helpers import mail_address_helper
 def send_mail(maildata: MIMEMultipart) -> dict:
   """
   Send an email using the AWS SES service.
+  maildata: MIMEMultipart: The email message to send.
+  Returns: dict: The response from the send_raw_email API call.
   """
   ses = boto3.client('ses')
 

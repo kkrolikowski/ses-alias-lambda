@@ -20,22 +20,23 @@ def prepare_email_message(raw_email: bytes, targets: list) -> MIMEMultipart:
 
   # Object to parse incoming email
   mailObject = BytesParser(policy=policy.default)
-  # Create a MIMEMultipart object to store the parsed email
-  mainMSG = MIMEMultipart('mixed')
-  relatedMSG = MIMEMultipart('related')
-  alternativeMSG = MIMEMultipart('alternative')
 
-  # Parse the raw email
+  # Create a MIMEMultipart objects to store each part of the email
+  mainMSG = MIMEMultipart('mixed')                # The main message and attachments
+  relatedMSG = MIMEMultipart('related')           # HTML and inline images
+  alternativeMSG = MIMEMultipart('alternative')   # Plain text part
+
+  # Parse the raw email from S3 bucket
   mail = mailObject.parsebytes(raw_email)
   
   # Define the content types that are considered binary
   binary_content_types = ['application', 'audio', 'video']
 
-  header_to = ",".join(targets)
+  alias_targets = ",".join(targets)
 
-  # Set the basic headers of the email
+  # Create new email headers compatible with SES
   mainMSG["From"] = mail_address_helper(mail.get("To"))         # SES requires the From header to be the verified recipient
-  mainMSG["To"] = header_to
+  mainMSG["To"] = alias_targets
   mainMSG["Reply-To"] = mail_address_helper(mail.get("From"))
   mainMSG["Subject"] = mail.get("Subject")
 
@@ -46,34 +47,39 @@ def prepare_email_message(raw_email: bytes, targets: list) -> MIMEMultipart:
       if part.get_payload(decode=True) is None:
         continue
 
-      # Add text and html parts to the new email message
+      # Obtain the content type and disposition of the part
       content_type = part.get_content_type()
       content_disposition = part.get_content_disposition()
-      charset = part.get_content_charset() or 'utf-8'
 
+      # Obtain the charset of the part or default to utf-8
+      charset = part.get_content_charset() or 'utf-8'
+      
+      # html goes to relatedMSG, text goes to alternativeMSG
       if content_type == 'text/html':
         html = safe_decode(part.get_payload(decode=True), charset)
         relatedMSG.attach(MIMEText(html, content_type.split('/')[1]))
       elif content_type == 'text/plain':
         text = safe_decode(part.get_payload(decode=True), charset)
         alternativeMSG.attach(MIMEText(text, content_type.split('/')[1]))
-      
+      # Inline images go to relatedMSG
       elif content_disposition == 'inline' and content_type.startswith('image/'):
         filename = part.get_filename()
         content_id = part.get("Content-ID")
         if not content_id:
-          # Generowanie unikalnego Content-ID, jeśli go brakuje
+          # Generate a unique Content-ID if it is missing
           content_id = filename or "image-" + str(hash(part.get_payload(decode=True)))
         
-        # Usuń znaki specjalne, jeśli to potrzebne
+        # Remove the angle brackets from the Content-ID
         content_id = content_id.strip("<>")
         
-        # Tworzenie MIMEImage z odpowiednimi nagłówkami
+        # Create a new MIMEImage object for decoded image
         image = MIMEImage(part.get_payload(decode=True), _subtype=content_type.split('/')[1])
+        
+        # Add the Content-ID and Content-Disposition headers, thy are required for inline images
         image.add_header('Content-ID', f'<{content_id}>')
         image.add_header('Content-Disposition', 'inline', filename=filename)
 
-        # Dodaj obraz do wiadomości
+        # Attach the image to the relatedMSG
         relatedMSG.attach(image)
       # Add attachments to the new email message
       elif content_disposition == 'attachment' or any([x in content_type for x in binary_content_types]):
@@ -89,8 +95,9 @@ def prepare_email_message(raw_email: bytes, targets: list) -> MIMEMultipart:
       relatedMSG.attach(MIMEText(text, 'html'))
     else:
       alternativeMSG.attach(MIMEText(text, 'plain'))
-  # Attach the text and html parts to the alternative message
+  
+  # Assemble the email message parts
   alternativeMSG.attach(relatedMSG)
   mainMSG.attach(alternativeMSG)
-  # Debug messsage
+  
   return mainMSG
