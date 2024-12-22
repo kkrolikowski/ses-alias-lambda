@@ -17,7 +17,7 @@ The Lambda function is invoked by the SES service and receives an event containi
 
 The Lambda function is invoked by the AWS SES service.
 
-Event fragment:
+SES event fragment:
 
 ```json
 {
