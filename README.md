@@ -17,7 +17,7 @@ The Lambda function is invoked by the SES service and receives an event containi
 
 The Lambda function is invoked by the AWS SES service.
 
-SES event fragment:
+#### SES event fragment:
 
 ```json
 {
@@ -30,6 +30,15 @@ SES event fragment:
       "messageId": "42psa7hk4n6m77qd56tum3dlhtnc3bnc6bhnaio1",
       "destination": ["alias@foo.com"],
       "headersTruncated": false,
+```
+
+#### SSM Parameter example
+
+```json
+{
+  "alias1@foo.com": ["target1@bar.com"],
+  "alias2@foo.com": ["target1@bar.com", "target2@bar.com"]
+}
 ```
 
 From the event, the messageId and destination, which contains the alias address, are extracted. The messageId is also the key name in the S3 bucket containing the email content.
