@@ -1,12 +1,11 @@
-# ses-alias-lambda
+# AWS SES Email Alias Lambda
 
-Lambda is designed to send raw emails through AWS Simple Email Services.
+This function helps solve a limitation of AWS Simple Email Service: you can’t send emails to external recipients using a FROM address that hasn’t been verified. The function disassembles the email and replaces the `FROM` address with an address from a domain verified in the SES service. It then reassembles all the parts and sends the email to the target recipients.
+
 
 ## How it works
 
 The Lambda function is invoked by the SES service and receives an event containing information about the sender and the MessageID. The MessageID is required to locate the corresponding object with the raw email message in the S3 bucket. Based on the recipient address received in the event, email alias targets are located in the AWS SSM Parameter Store service.
-
- This function helps solve a limitation of AWS Simple Email Service: you can’t send emails to external recipients using a FROM address that hasn’t been verified. The function disassembles the email and replaces the `FROM` address with an address from a domain verified in the SES service. It then reassembles all the parts and sends the email to the target recipients.
 
 ### Environment variables
 
@@ -16,6 +15,7 @@ The Lambda function is invoked by the SES service and receives an event containi
 | ALIAS_MAP_PARAM | SSM parameter path with email alias mappings |
 
 ### Input data
+
 The Lambda function is invoked by the AWS SES service.
 
 #### SES event fragment:
